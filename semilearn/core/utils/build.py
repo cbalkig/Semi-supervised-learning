@@ -106,7 +106,8 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
         # Instead of calling standard get_imagenet, we manually build Source & Target datasets
         # 1. Source Domain (Labeled) -> train_labeled folder
         lb_data_dir = os.path.join(data_dir, "train_labeled")
-        lb_dset = ImagenetDataset(root=lb_data_dir, transform=args.transform_source, ulb=False, alg=algorithm)
+        # Use transform_weak for source (labeled) data
+        lb_dset = ImagenetDataset(root=lb_data_dir, transform=args.transform_weak, ulb=False, alg=algorithm)
 
         # 2. Target Domain (Unlabeled) -> train_unlabeled folder
         ulb_data_dir = os.path.join(data_dir, "train_unlabeled")
@@ -116,6 +117,9 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
         # 3. Target Test (Evaluation) -> test folder
         eval_data_dir = os.path.join(data_dir, "test")
         eval_dset = ImagenetDataset(root=eval_data_dir, transform=args.transform_val, ulb=False, alg=algorithm)
+
+        # 4. Define test_dset to avoid UnboundLocalError
+        test_dset = None
     else:
         return None
     
