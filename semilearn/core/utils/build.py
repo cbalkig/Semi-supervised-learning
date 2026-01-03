@@ -97,15 +97,6 @@ def get_transforms(img_size, crop_ratio, args):
 def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./data', include_lb_to_ulb=True):
     """
     create dataset
-
-    Args
-        args: argparse arguments
-        algorithm: algorithm name, used for specific return items in __getitem__ of datasets
-        dataset: dataset name
-        num_labels: number of labeled data in dataset
-        num_classes: number of classes
-        data_dir: data folder
-        include_lb_to_ulb: flag of including labeled data into unlabeled data
     """
     from semilearn.datasets import get_eurosat, get_medmnist, get_semi_aves, get_cifar, get_svhn, get_stl10, get_imagenet, get_json_dset, get_pkl_dset
 
@@ -144,37 +135,25 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
         from semilearn.datasets.cv_datasets.imagenet import ImagenetDataset
         import os
 
-        # 1. Generate Transforms (using the local function in build.py)
+        # 1. Generate Transforms
         transform_weak, transform_strong, transform_val = get_transforms(args.img_size, args.crop_ratio, args)
 
-        # 2. Define MultiTransform Wrapper
-        # This wrapper ensures the dataset receives both weak and strong augmentations
-        # via the single 'transform' argument, as required by the library.
-        class MultiTransform:
-            def __init__(self, weak, strong):
-                self.weak = weak
-                self.strong = strong
-
-            def __call__(self, x):
-                return self.weak(x), self.strong(x)
-
-        # 3. Source Domain (Labeled) -> train_labeled folder
+        # 2. Source Domain (Labeled)
         lb_data_dir = os.path.join(data_dir, "train_labeled")
         lb_dset = ImagenetDataset(root=lb_data_dir, transform=transform_weak, ulb=False, alg=algorithm)
 
-        # 4. Target Domain (Unlabeled) -> train_unlabeled folder
-        # FIX: Use MultiTransform wrapper and remove 'transform_strong' argument
+        # 3. Target Domain (Unlabeled)
         ulb_data_dir = os.path.join(data_dir, "train_unlabeled")
-        ulb_dset = ImagenetDataset(root=ulb_data_dir,
-                                   transform=MultiTransform(transform_weak, transform_strong),
-                                   ulb=True,
-                                   alg=algorithm)
+        # Note: We pass transform_weak as the base transform.
+        ulb_dset = ImagenetDataset(root=ulb_data_dir, transform=transform_weak, ulb=True, alg=algorithm)
 
-        # 5. Target Test (Evaluation) -> test folder
+        # CRITICAL FIX: Manually inject strong_transform since __init__ refused it
+        ulb_dset.strong_transform = transform_strong
+
+        # 4. Target Test (Evaluation)
         eval_data_dir = os.path.join(data_dir, "test")
         eval_dset = ImagenetDataset(root=eval_data_dir, transform=transform_val, ulb=False, alg=algorithm)
 
-        # 6. Define test_dset
         test_dset = None
     # --- UDA PATCH END ---
 
