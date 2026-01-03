@@ -10,6 +10,7 @@ import torch.distributed as dist
 from torch.utils.data import DataLoader
 from semilearn.datasets import get_collactor, name2sampler
 from semilearn.nets.utils import param_groups_layer_decay, param_groups_weight_decay
+from semilearn.datasets.cv_datasets.imagenet import ImagenetDataset
 
 def get_net_builder(net_name, from_name: bool):
     """
@@ -101,6 +102,20 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
         lb_dset, ulb_dset, eval_dset, test_dset = get_pkl_dset(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)
     elif dataset in ['aclImdb', 'ag_news', 'amazon_review', 'dbpedia', 'yahoo_answers', 'yelp_review']:
         lb_dset, ulb_dset, eval_dset, test_dset = get_json_dset(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)
+    elif name == 'neurodomain':
+        # Instead of calling standard get_imagenet, we manually build Source & Target datasets
+        # 1. Source Domain (Labeled) -> train_labeled folder
+        lb_data_dir = os.path.join(data_dir, "train_labeled")
+        lb_dset = ImagenetDataset(root=lb_data_dir, transform=args.transform_source, ulb=False, alg=algorithm)
+
+        # 2. Target Domain (Unlabeled) -> train_unlabeled folder
+        ulb_data_dir = os.path.join(data_dir, "train_unlabeled")
+        # Use 'transform_weak' and 'transform_strong' for FreeMatch
+        ulb_dset = ImagenetDataset(root=ulb_data_dir, transform=args.transform_weak, transform_strong=args.transform_strong, ulb=True, alg=algorithm)
+
+        # 3. Target Test (Evaluation) -> test folder
+        eval_data_dir = os.path.join(data_dir, "test")
+        eval_dset = ImagenetDataset(root=eval_data_dir, transform=args.transform_val, ulb=False, alg=algorithm)
     else:
         return None
     
