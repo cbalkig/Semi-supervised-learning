@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 from semilearn.datasets import get_collactor, name2sampler
 from semilearn.nets.utils import param_groups_layer_decay, param_groups_weight_decay
 from semilearn.datasets.cv_datasets.imagenet import ImagenetDataset
-from semilearn.datasets.utils import get_transforms
 
 def get_net_builder(net_name, from_name: bool):
     """
@@ -58,6 +57,42 @@ def get_logger(name, save_path=None, level='INFO'):
 
     return logger
 
+
+def get_transforms(img_size, crop_ratio, args):
+    """
+    Manually define transforms to avoid import errors.
+    """
+    from torchvision import transforms
+    from semilearn.datasets.augmentation import RandAugment
+
+    # 1. Weak Augmentation (Flip + Crop)
+    transform_weak = transforms.Compose([
+        transforms.Resize((int(math.floor(img_size / crop_ratio)), int(math.floor(img_size / crop_ratio)))),
+        transforms.RandomCrop(img_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    # 2. Strong Augmentation (Weak + RandAugment)
+    transform_strong = transforms.Compose([
+        transforms.Resize((int(math.floor(img_size / crop_ratio)), int(math.floor(img_size / crop_ratio)))),
+        transforms.RandomCrop(img_size),
+        transforms.RandomHorizontalFlip(),
+        RandAugment(3, 5),  # standard RandAugment params
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    # 3. Validation Transform (Resize + CenterCrop)
+    transform_val = transforms.Compose([
+        transforms.Resize(int(math.floor(img_size / crop_ratio))),
+        transforms.CenterCrop(img_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    return transform_weak, transform_strong, transform_val
 
 def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./data', include_lb_to_ulb=True):
     """
