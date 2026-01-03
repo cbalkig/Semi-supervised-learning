@@ -1,98 +1,86 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT License.
-
-
 import os
+import argparse
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from semilearn.core.utils import get_net_builder, get_dataset
+from sklearn.metrics import f1_score
+from semilearn.core.utils import get_net_builder, get_dataset, get_data_loader, get_config, get_algorithm
 
-
-if __name__ == "__main__":
-    import argparse
+def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--c', type=str, required=True, help='Path to the config file (same as training)')
+    parser.add_argument('--load_path', type=str, required=True, help='Path to the model_best.pth')
 
-    parser.add_argument('--load_path', type=str, required=True)
+    # Parse arguments and load config
+    _args = parser.parse_args()
+    args = get_config(_args.c)
 
-    '''
-    Backbone Net Configurations
-    '''
-    parser.add_argument('--net', type=str, default='wrn_28_2')
-    parser.add_argument('--net_from_name', type=bool, default=False)
+    # Override with load_path
+    args.load_path = _args.load_path
+    args.resume = True
 
-    '''
-    Data Configurations
-    '''
-    parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--data_dir', type=str, default='./data')
-    parser.add_argument('--dataset', type=str, default='cifar10')
-    parser.add_argument('--num_classes', type=int, default=10)
-    parser.add_argument('--img_size', type=int, default=32)
-    parser.add_argument('--crop_ratio', type=int, default=0.875)
-    parser.add_argument('--max_length', type=int, default=512)
-    parser.add_argument('--max_length_seconds', type=float, default=4.0)
-    parser.add_argument('--sample_rate', type=int, default=16000)
+    # Force GPU 0 if not set
+    if not hasattr(args, 'gpu'):
+        args.gpu = 0
+    torch.cuda.set_device(args.gpu)
 
-    args = parser.parse_args()
-    
-    checkpoint_path = os.path.join(args.load_path)
-    checkpoint = torch.load(checkpoint_path)
-    load_model = checkpoint['ema_model']
-    load_state_dict = {}
-    for key, item in load_model.items():
-        if key.startswith('module'):
-            new_key = '.'.join(key.split('.')[1:])
-            load_state_dict[new_key] = item
-        else:
-            load_state_dict[key] = item
-    save_dir = '/'.join(checkpoint_path.split('/')[:-1])
-    args.save_dir = save_dir
-    args.save_name = ''
-    
-    net = get_net_builder(args.net, args.net_from_name)(num_classes=args.num_classes)
-    keys = net.load_state_dict(load_state_dict)
-    if torch.cuda.is_available():
-        net.cuda()
-    net.eval()
-    
-    # specify these arguments manually 
-    args.num_labels = 40
-    args.ulb_num_labels = 49600
-    args.lb_imb_ratio = 1
-    args.ulb_imb_ratio = 1
-    args.seed = 0
-    args.epoch = 1
-    args.num_train_iter = 1024
-    dataset_dict = get_dataset(args, 'fixmatch', args.dataset, args.num_labels, args.num_classes, args.data_dir, False)
-    eval_dset = dataset_dict['eval']
-    eval_loader = DataLoader(eval_dset, batch_size=args.batch_size, drop_last=False, shuffle=False, num_workers=4)
- 
-    acc = 0.0
-    test_feats = []
-    test_preds = []
-    test_probs = []
-    test_labels = []
+    print(f"Loading config from: {_args.c}")
+    print(f"Loading model from: {args.load_path}")
+
+    # 1. Build Model (Architecture only)
+    net_builder = get_net_builder(args.net, args.net_from_name)
+    net = net_builder(num_classes=args.num_classes)
+
+    # 2. Load Algorithm (Wrap model with FreeMatch logic)
+    algorithm = get_algorithm(args, net, tb_log=None, logger=None)
+
+    # 3. Load Checkpoint (Weights)
+    checkpoint = torch.load(args.load_path, map_location='cpu')
+    algorithm.load_model(args.load_path)
+    algorithm.cuda()
+    algorithm.eval()
+
+    # 4. Load Dataset (Target Test Set)
+    # Note: We specifically request the 'test' split which corresponds to your 'test' folder
+    dataset_dict = get_dataset(args, args.algorithm, args.dataset, args.num_labels, args.num_classes, args.data_dir, False)
+    test_dset = dataset_dict['test']
+    eval_loader = DataLoader(test_dset, batch_size=args.batch_size, drop_last=False, shuffle=False, num_workers=4)
+
+    print(f"Evaluating on {len(test_dset)} samples...")
+
+    # 5. Run Inference
+    preds = []
+    targets = []
+
     with torch.no_grad():
         for data in eval_loader:
             image = data['x_lb']
             target = data['y_lb']
 
-            image = image.type(torch.FloatTensor).cuda()
-            feat = net(image, only_feat=True)
-            logit = net(feat, only_fc=True)
-            prob = logit.softmax(dim=-1)
+            image = image.cuda()
+
+            # Forward pass
+            # Note: Semi-learn models output a dictionary or raw logits depending on mode
+            logits = algorithm.model(image)
+
+            # Get predictions
+            prob = torch.softmax(logits, dim=-1)
             pred = prob.argmax(1)
 
-            acc += pred.cpu().eq(target).numpy().sum()
+            preds.append(pred.cpu().numpy())
+            targets.append(target.numpy())
 
-            test_feats.append(feat.cpu().numpy())
-            test_preds.append(pred.cpu().numpy())
-            test_probs.append(prob.cpu().numpy())
-            test_labels.append(target.cpu().numpy())
-    test_feats = np.concatenate(test_feats)
-    test_preds = np.concatenate(test_preds)
-    test_probs = np.concatenate(test_probs)
-    test_labels = np.concatenate(test_labels)
+    # 6. Calculate Metrics
+    preds = np.concatenate(preds)
+    targets = np.concatenate(targets)
 
-    print(f"Test Accuracy: {acc/len(eval_dset)}")
+    acc = (preds == targets).mean() * 100
+    f1 = f1_score(targets, preds, average='macro') * 100
+
+    print("-" * 30)
+    print(f"Test Accuracy: {acc:.2f}%")
+    print(f"Test Macro-F1: {f1:.2f}%")
+    print("-" * 30)
+
+if __name__ == "__main__":
+    main()
