@@ -8,9 +8,10 @@ import random
 import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
-from semilearn.datasets import get_collactor, name2sampler, get_transforms
+from semilearn.datasets import get_collactor, name2sampler
 from semilearn.nets.utils import param_groups_layer_decay, param_groups_weight_decay
 from semilearn.datasets.cv_datasets.imagenet import ImagenetDataset
+from semilearn.datasets.utils import get_transforms
 
 def get_net_builder(net_name, from_name: bool):
     """
