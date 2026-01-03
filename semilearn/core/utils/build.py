@@ -102,7 +102,7 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
         lb_dset, ulb_dset, eval_dset, test_dset = get_pkl_dset(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)
     elif dataset in ['aclImdb', 'ag_news', 'amazon_review', 'dbpedia', 'yahoo_answers', 'yelp_review']:
         lb_dset, ulb_dset, eval_dset, test_dset = get_json_dset(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)
-    elif name == 'neurodomain':
+    elif dataset == 'neurodomain':
         # Instead of calling standard get_imagenet, we manually build Source & Target datasets
         # 1. Source Domain (Labeled) -> train_labeled folder
         lb_data_dir = os.path.join(data_dir, "train_labeled")
