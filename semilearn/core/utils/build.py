@@ -8,7 +8,7 @@ import random
 import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
-from semilearn.datasets import get_collactor, name2sampler
+from semilearn.datasets import get_collactor, name2sampler, get_transforms
 from semilearn.nets.utils import param_groups_layer_decay, param_groups_weight_decay
 from semilearn.datasets.cv_datasets.imagenet import ImagenetDataset
 
@@ -103,22 +103,23 @@ def get_dataset(args, algorithm, dataset, num_labels, num_classes, data_dir='./d
     elif dataset in ['aclImdb', 'ag_news', 'amazon_review', 'dbpedia', 'yahoo_answers', 'yelp_review']:
         lb_dset, ulb_dset, eval_dset, test_dset = get_json_dset(args, algorithm, dataset, num_labels, num_classes, data_dir=data_dir, include_lb_to_ulb=include_lb_to_ulb)
     elif dataset == 'neurodomain':
-        # Instead of calling standard get_imagenet, we manually build Source & Target datasets
-        # 1. Source Domain (Labeled) -> train_labeled folder
+        # 1. Generate Transforms (Augmentations)
+        # USB library standard function to create Weak, Strong, and Val transforms
+        transform_weak, transform_strong, transform_val = get_transforms(args.img_size, args.crop_ratio, args)
+
+        # 2. Source Domain (Labeled) -> train_labeled folder
         lb_data_dir = os.path.join(data_dir, "train_labeled")
-        # Use transform_weak for source (labeled) data
-        lb_dset = ImagenetDataset(root=lb_data_dir, transform=args.transform_weak, ulb=False, alg=algorithm)
+        lb_dset = ImagenetDataset(root=lb_data_dir, transform=transform_weak, ulb=False, alg=algorithm)
 
-        # 2. Target Domain (Unlabeled) -> train_unlabeled folder
+        # 3. Target Domain (Unlabeled) -> train_unlabeled folder
         ulb_data_dir = os.path.join(data_dir, "train_unlabeled")
-        # Use 'transform_weak' and 'transform_strong' for FreeMatch
-        ulb_dset = ImagenetDataset(root=ulb_data_dir, transform=args.transform_weak, transform_strong=args.transform_strong, ulb=True, alg=algorithm)
+        ulb_dset = ImagenetDataset(root=ulb_data_dir, transform=transform_weak, transform_strong=transform_strong, ulb=True, alg=algorithm)
 
-        # 3. Target Test (Evaluation) -> test folder
+        # 4. Target Test (Evaluation) -> test folder
         eval_data_dir = os.path.join(data_dir, "test")
-        eval_dset = ImagenetDataset(root=eval_data_dir, transform=args.transform_val, ulb=False, alg=algorithm)
+        eval_dset = ImagenetDataset(root=eval_data_dir, transform=transform_val, ulb=False, alg=algorithm)
 
-        # 4. Define test_dset to avoid UnboundLocalError
+        # 5. Define test_dset to avoid UnboundLocalError
         test_dset = None
     else:
         return None
