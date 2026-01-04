@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-# Usage: ./exec.sh neurodomain_vegfru_train.yaml
+# Force Python to print logs immediately (crucial for nohup/background jobs)
+export PYTHONUNBUFFERED=1
 
+# Usage: ./exec.sh neurodomain_vegfru.yaml
 CFG_FILE="$1"
 
 if [[ -z "$CFG_FILE" ]]; then
@@ -11,7 +13,7 @@ if [[ -z "$CFG_FILE" ]]; then
 fi
 
 # --- 1. Parse Config for Paths (Python One-Liner) ---
-# We need to know where 'train.py' will save the model to pass it to 'eval.py'
+# We extract 'save_dir' and 'save_name' to construct the path to 'model_best.pth'
 read -r SAVE_DIR SAVE_NAME <<< $(python3 -c "
 import yaml, sys
 with open('$CFG_FILE', 'r') as f:
@@ -25,6 +27,7 @@ MODEL_PATH="${SAVE_DIR}/${SAVE_NAME}/model_best.pth"
 echo "================================================"
 echo " STEP 1: Starting Training with FreeMatch"
 echo " Config: $CFG_FILE"
+echo " Time: $(date)"
 echo "================================================"
 
 python train.py --c "$CFG_FILE"
@@ -34,6 +37,7 @@ echo ""
 echo "================================================"
 echo " STEP 2: Starting Evaluation on Target Test Set"
 echo " Model: $MODEL_PATH"
+echo " Time: $(date)"
 echo "================================================"
 
 if [[ ! -f "$MODEL_PATH" ]]; then
@@ -43,3 +47,8 @@ if [[ ! -f "$MODEL_PATH" ]]; then
 fi
 
 python eval.py --c "$CFG_FILE" --load_path "$MODEL_PATH"
+
+echo "================================================"
+echo " DONE: Pipeline Finished Successfully"
+echo " Time: $(date)"
+echo "================================================"
