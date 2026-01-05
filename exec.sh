@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+# --- 0. Activate Virtual Environment ---
+# Checks for a .venv directory in the current folder and activates it
+if [[ -f ".venv/bin/activate" ]]; then
+    echo "Activating virtual environment (.venv)..."
+    source .venv/bin/activate
+else
+    echo "Warning: .venv/bin/activate not found. Using system Python."
+fi
+
 # Force Python to print logs immediately (crucial for nohup/background jobs)
 export PYTHONUNBUFFERED=1
 
@@ -13,7 +22,7 @@ if [[ -z "$CFG_FILE" ]]; then
 fi
 
 # --- 1. Parse Config for Paths (Python One-Liner) ---
-# We extract 'save_dir' and 'save_name' to construct the path to 'model_best.pth'
+# We use the now-activated python to parse the config
 read -r SAVE_DIR SAVE_NAME <<< $(python3 -c "
 import yaml, sys
 with open('$CFG_FILE', 'r') as f:
@@ -30,6 +39,7 @@ echo " Config: $CFG_FILE"
 echo " Time: $(date)"
 echo "================================================"
 
+# nohup will now use the python from the activated .venv
 nohup python train.py --c "$CFG_FILE"
 
 # --- 3. Run Evaluation ---
