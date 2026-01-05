@@ -30,7 +30,7 @@ echo " Config: $CFG_FILE"
 echo " Time: $(date)"
 echo "================================================"
 
-python train.py --c "$CFG_FILE"
+nohup python train.py --c "$CFG_FILE"
 
 # --- 3. Run Evaluation ---
 echo ""
@@ -46,7 +46,7 @@ if [[ ! -f "$MODEL_PATH" ]]; then
     exit 1
 fi
 
-python eval.py --c "$CFG_FILE" --load_path "$MODEL_PATH"
+nohup python eval.py --c "$CFG_FILE" --load_path "$MODEL_PATH"
 
 echo "================================================"
 echo " DONE: Pipeline Finished Successfully"
