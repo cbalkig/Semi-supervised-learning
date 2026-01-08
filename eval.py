@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
-from semilearn.core.utils import get_net_builder, get_dataset, get_data_loader, get_config, get_algorithm
+from semilearn import get_net_builder, get_dataset, get_data_loader, get_config, get_algorithm
 
 def main():
     parser = argparse.ArgumentParser()
