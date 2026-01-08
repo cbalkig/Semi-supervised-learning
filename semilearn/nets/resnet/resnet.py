@@ -264,3 +264,8 @@ class ResNet50(nn.Module):
 def resnet50(pretrained=False, pretrained_path=None, **kwargs):
     model = ResNet50(**kwargs)
     return model
+
+def resnet101(pretrained=False, pretrained_path=None, **kwargs):
+    kwargs['layers'] = [3, 4, 23, 3]
+    model = ResNet50(**kwargs)
+    return model
