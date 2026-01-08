@@ -13,7 +13,18 @@ def main():
 
     # Parse arguments and load config
     _args = parser.parse_args()
-    args = get_config(_args)
+    import yaml
+    with open(_args.c, 'r') as f:
+        config_dict = yaml.safe_load(f)
+
+    # 2. Pass the dictionary to get_config
+    args = get_config(config_dict)
+
+    # 3. (Optional but recommended) Manually override with CLI args if needed
+    # This ensures your command line flags (like --gpu) take precedence
+    for key, value in vars(_args).items():
+        if value is not None:
+            setattr(args, key, value)
 
     # Override with load_path
     args.load_path = _args.load_path
