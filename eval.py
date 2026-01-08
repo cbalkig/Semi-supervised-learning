@@ -9,16 +9,17 @@ import semilearn.nets as nets
 import torch.nn as nn
 from torchvision.models import resnet101 as torchvision_resnet101
 
-def resnet101_builder(args, net_conf):
+def resnet101_builder(num_classes=None, pretrained=False, pretrained_path=None, **kwargs):
     # 1. Create standard ResNet101
-    # 'weights=None' because we load your checkpoint later.
-    # If you were training from scratch, you might want weights='DEFAULT'.
+    # We ignore 'pretrained' flag here since we load your specific checkpoint later anyway.
+    # If you were training, you'd handle 'pretrained' logic here.
     model = torchvision_resnet101(weights=None)
 
     # 2. Adjust the final classification layer
-    # ResNet's final layer is named 'fc'. We replace it to match your num_classes.
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, args.num_classes)
+    # ResNet's final layer is named 'fc'.
+    if num_classes is not None:
+        num_ftrs = model.fc.in_features
+        model.fc = nn.Linear(num_ftrs, num_classes)
 
     return model
 
