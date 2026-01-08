@@ -43,11 +43,10 @@ def main():
     print(f"Loading model from: {args.load_path}")
 
     # 1. Build Model (Architecture only)
-    net_builder = get_net_builder(args.net, args.net_from_name)
-    net = net_builder(num_classes=args.num_classes)
+    net_builder = get_net_builder(args.model, args.net_conf)
 
-    # 2. Load Algorithm (Wrap model with FreeMatch logic)
-    algorithm = get_algorithm(args, net, tb_log=None, logger=None)
+    # Pass 'net_builder' (the function), NOT 'net' (the instance)
+    algorithm = get_algorithm(args, net_builder, tb_log=None, logger=None)
 
     # 3. Load Checkpoint (Weights)
     checkpoint = torch.load(args.load_path, map_location='cpu')
