@@ -6,7 +6,22 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 from semilearn import get_net_builder, get_dataset, get_data_loader, get_config, get_algorithm
 import semilearn.nets as nets
-from semilearn.nets.resnet import ResNet
+import torch.nn as nn
+from torchvision.models import resnet101 as torchvision_resnet101
+
+def resnet101_builder(args, net_conf):
+    # 1. Create standard ResNet101
+    # 'weights=None' because we load your checkpoint later.
+    # If you were training from scratch, you might want weights='DEFAULT'.
+    model = torchvision_resnet101(weights=None)
+
+    # 2. Adjust the final classification layer
+    # ResNet's final layer is named 'fc'. We replace it to match your num_classes.
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, args.num_classes)
+
+    return model
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -52,15 +67,7 @@ def main():
     print(f"Loading config from: {_args.c}")
     print(f"Loading model from: {args.load_path}")
 
-    def resnet101(args, net_conf):
-    # This assumes the ResNet class in semilearn wraps torchvision and accepts 'depth'
-    # The arguments might vary slightly depending on semilearn version,
-    # but usually it expects (args, net_conf) or just kwargs.
-    # We map it to the existing ResNet class with depth=101.
-        return ResNet(depth=101, num_classes=args.num_classes, pretrained=args.use_pretrain, pretrained_path=args.pretrain_path)
-
-    # Register it into the nets module so get_net_builder can find it
-    nets.resnet101 = resnet101
+    nets.resnet101 = resnet101_builder
 
     # 1. Build Model (Architecture only)
     net_builder = get_net_builder(args.model, args.net_conf)
