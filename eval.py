@@ -13,7 +13,7 @@ def main():
 
     # Parse arguments and load config
     _args = parser.parse_args()
-    args = get_config(_args.c)
+    args = get_config(_args)
 
     # Override with load_path
     args.load_path = _args.load_path
