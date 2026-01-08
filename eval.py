@@ -30,6 +30,14 @@ def main():
     if not hasattr(args, 'amp'):
         args.amp = False
 
+    # --- ADD THESE LINES ---
+    if not hasattr(args, 'net_conf'):
+        args.net_conf = None
+
+    if not hasattr(args, 'num_labels'):
+        args.num_labels = None
+    # -----------------------
+
     # Override with load_path
     args.load_path = _args.load_path
     args.resume = True
