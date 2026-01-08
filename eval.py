@@ -26,6 +26,10 @@ def main():
         if value is not None:
             setattr(args, key, value)
 
+    # Set default for amp if it's missing
+    if not hasattr(args, 'amp'):
+        args.amp = False
+
     # Override with load_path
     args.load_path = _args.load_path
     args.resume = True
