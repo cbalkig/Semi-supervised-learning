@@ -4,24 +4,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
-from semilearn import get_net_builder, get_dataset, get_data_loader, get_config, get_algorithm
+from semilearn import get_net_builder, get_dataset, get_config, get_algorithm
 import semilearn.nets as nets
-import torch.nn as nn
 from torchvision.models import resnet101 as torchvision_resnet101
-
-def resnet101_builder(num_classes=None, pretrained=False, pretrained_path=None, **kwargs):
-    # 1. Create standard ResNet101
-    # We ignore 'pretrained' flag here since we load your specific checkpoint later anyway.
-    # If you were training, you'd handle 'pretrained' logic here.
-    model = torchvision_resnet101(weights=None)
-
-    # 2. Adjust the final classification layer
-    # ResNet's final layer is named 'fc'.
-    if num_classes is not None:
-        num_ftrs = model.fc.in_features
-        model.fc = nn.Linear(num_ftrs, num_classes)
-
-    return model
 
 
 def main():
@@ -71,7 +56,7 @@ def main():
     nets.resnet101 = resnet101_builder
 
     # 1. Build Model (Architecture only)
-    net_builder = get_net_builder(args.model, args.net_conf)
+    net_builder = get_net_builder(args.net, args.net_conf)
 
     # Pass 'net_builder' (the function), NOT 'net' (the instance)
     algorithm = get_algorithm(args, net_builder, tb_log=None, logger=None)
