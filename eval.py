@@ -7,7 +7,7 @@ from sklearn.metrics import f1_score
 from semilearn import get_net_builder, get_dataset, get_data_loader, get_config, get_algorithm
 import semilearn.nets as nets
 import torch.nn as nn
-from resnet import resnet101
+from semilearn.nets.resnet import resnet101
 
 
 def main():
