@@ -88,7 +88,8 @@ def main():
 
             # Forward pass
             # Note: Semi-learn models output a dictionary or raw logits depending on mode
-            logits = algorithm.model(image)
+            outputs = algorithm.model(image)
+            logits = outputs['logits']
 
             # Get predictions
             prob = torch.softmax(logits, dim=-1)
