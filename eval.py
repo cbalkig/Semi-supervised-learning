@@ -70,7 +70,7 @@ def main():
     # 4. Load Dataset (Target Test Set)
     # Note: We specifically request the 'test' split which corresponds to your 'test' folder
     dataset_dict = get_dataset(args, args.algorithm, args.dataset, args.num_labels, args.num_classes, args.data_dir, False)
-    test_dset = dataset_dict['test']
+    test_dset = dataset_dict['eval']
     eval_loader = DataLoader(test_dset, batch_size=args.batch_size, drop_last=False, shuffle=False, num_workers=4)
 
     print(f"Evaluating on {len(test_dset)} samples...")
