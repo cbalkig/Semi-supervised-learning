@@ -63,10 +63,9 @@ def main():
     algorithm = get_algorithm(args, net_builder, tb_log=None, logger=None)
 
     # 3. Load Checkpoint (Weights)
-    checkpoint = torch.load(args.load_path, map_location='cpu')
     algorithm.load_model(args.load_path)
-    algorithm.cuda()
-    algorithm.eval()
+    algorithm.model.cuda()
+    algorithm.model.eval()
 
     # 4. Load Dataset (Target Test Set)
     # Note: We specifically request the 'test' split which corresponds to your 'test' folder
